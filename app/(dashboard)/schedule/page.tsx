@@ -1,10 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, momentLocalizer, Event } from 'react-big-calendar';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import moment from 'moment';
-import 'moment/locale/pt-br';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -18,15 +14,13 @@ import { db } from '@/lib/firebase/config';
 import { Appointment, Patient } from '@/lib/types';
 import { Plus, Calendar as CalendarIcon, Clock, User, Video, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-
-moment.locale('pt-br');
-const localizer = momentLocalizer(moment);
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function SchedulePage() {
   const { firebaseUser } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [isEditAppointmentOpen, setIsEditAppointmentOpen] = useState(false);
@@ -80,19 +74,6 @@ export default function SchedulePage() {
       } as Appointment));
 
       setAppointments(appointmentsList);
-
-      // Convert to calendar events
-      const calendarEvents = appointmentsList.map(appointment => ({
-        id: appointment.id,
-        title: appointment.patientName,
-        start: appointment.date instanceof Date ? appointment.date : appointment.date.toDate(),
-        end: appointment.date instanceof Date 
-          ? new Date(appointment.date.getTime() + appointment.duration * 60000)
-          : new Date(appointment.date.toDate().getTime() + appointment.duration * 60000),
-        resource: appointment
-      }));
-
-      setEvents(calendarEvents);
       setLoading(false);
     });
 
@@ -158,8 +139,8 @@ export default function SchedulePage() {
     }
   };
 
-  const handleSelectEvent = (event: Event) => {
-    setSelectedAppointment(event.resource as Appointment);
+  const handleSelectAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
     setIsEditAppointmentOpen(true);
   };
 
@@ -209,7 +190,12 @@ export default function SchedulePage() {
                 <Label htmlFor="date">Data e Hora</Label>
                 <Input
                   type="datetime-local"
-                  value={moment(newAppointment.date).format('YYYY-MM-DDTHH:mm')}
+                  value={format(
+                    newAppointment.date instanceof Date 
+                      ? newAppointment.date 
+                      : newAppointment.date?.toDate() || new Date(), 
+                    'yyyy-MM-dd\'T\'HH:mm'
+                  )}
                   onChange={(e) => setNewAppointment({
                     ...newAppointment, 
                     date: new Date(e.target.value)
@@ -286,33 +272,67 @@ export default function SchedulePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            Calendário de Consultas
+            Lista de Consultas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div style={{ height: '600px' }}>
-            <Calendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              onSelectEvent={handleSelectEvent}
-              messages={{
-                next: 'Próximo',
-                previous: 'Anterior',
-                today: 'Hoje',
-                month: 'Mês',
-                week: 'Semana',
-                day: 'Dia',
-                agenda: 'Agenda',
-                date: 'Data',
-                time: 'Hora',
-                event: 'Evento',
-                noEventsInRange: 'Não há consultas neste período.',
-                showMore: (total) => `+ ${total} mais`,
-              }}
-              culture="pt-BR"
-            />
+          <div className="space-y-4">
+            {appointments.length === 0 ? (
+              <div className="text-center py-12">
+                <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Nenhuma consulta agendada
+                </h3>
+                <p className="text-gray-500">
+                  Clique em "Nova Consulta" para agendar uma consulta.
+                </p>
+              </div>
+            ) : (
+              appointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleSelectAppointment(appointment)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${
+                      appointment.type === 'online' ? 'bg-blue-100' : 'bg-green-100'
+                    }`}>
+                      {appointment.type === 'online' ? (
+                        <Video className={`h-4 w-4 text-blue-600`} />
+                      ) : (
+                        <MapPin className={`h-4 w-4 text-green-600`} />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{appointment.patientName}</p>
+                      <p className="text-sm text-gray-500">
+                        {format(
+                          appointment.date instanceof Date ? appointment.date : appointment.date.toDate(),
+                          "dd/MM/yyyy 'às' HH:mm",
+                          { locale: ptBR }
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Duração: {appointment.duration} min
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                      appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      appointment.status === 'canceled' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {appointment.status === 'scheduled' ? 'Agendada' :
+                       appointment.status === 'completed' ? 'Concluída' :
+                       appointment.status === 'canceled' ? 'Cancelada' : 'Faltou'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -333,8 +353,11 @@ export default function SchedulePage() {
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {moment(selectedAppointment.date instanceof Date ? selectedAppointment.date : selectedAppointment.date.toDate())
-                    .format('DD/MM/YYYY [às] HH:mm')}
+                  {format(
+                    selectedAppointment.date instanceof Date ? selectedAppointment.date : selectedAppointment.date.toDate(),
+                    "dd/MM/yyyy 'às' HH:mm",
+                    { locale: ptBR }
+                  )}
                 </span>
               </div>
 
