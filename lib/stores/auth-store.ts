@@ -10,7 +10,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setFirebaseUser: (user: FirebaseUser | null) => void;
   setLoading: (loading: boolean) => void;
-  initialize: () => void;
+  initialize: () => () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({

@@ -21,9 +21,7 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
-  getDocs,
-  startOfMonth,
-  endOfMonth 
+  getDocs 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { FinancialRecord, Patient } from '@/lib/types';
@@ -40,10 +38,11 @@ import {
   Edit,
   Trash2,
   Download,
-  Filter
+  Filter,
+  Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, startOfMonth as startMonth, endOfMonth as endMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   LineChart,
@@ -124,8 +123,8 @@ export default function FinancialPage() {
   const subscribeToRecords = () => {
     if (!firebaseUser) return;
 
-    const monthStart = startMonth(selectedMonth);
-    const monthEnd = endMonth(selectedMonth);
+    const monthStart = startOfMonth(selectedMonth);
+    const monthEnd = endOfMonth(selectedMonth);
 
     const recordsQuery = query(
       collection(db, `users/${firebaseUser.uid}/financial`),
@@ -352,7 +351,12 @@ export default function FinancialPage() {
                   <Label htmlFor="date">Data</Label>
                   <Input
                     type="date"
-                    value={format(newRecord.date || new Date(), 'yyyy-MM-dd')}
+                    value={format(
+                      newRecord.date instanceof Date 
+                        ? newRecord.date 
+                        : newRecord.date?.toDate() || new Date(), 
+                      'yyyy-MM-dd'
+                    )}
                     onChange={(e) => setNewRecord({
                       ...newRecord,
                       date: new Date(e.target.value)
