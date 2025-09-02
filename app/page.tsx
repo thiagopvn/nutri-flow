@@ -1,40 +1,34 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/use-auth';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  const router = useRouter();
-  const { firebaseUser, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading) {
-      if (firebaseUser) {
-        router.push('/dashboard');
-      } else {
-        router.push('/login');
-      }
-    }
-  }, [firebaseUser, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900">Carregando NutriFlow...</h2>
-          <p className="text-gray-600 mt-2">Verificando autenticação</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">NutriFlow</h1>
-        <p className="text-gray-600">Redirecionando...</p>
+      <div className="text-center max-w-md mx-auto px-4">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">NutriFlow</h1>
+          <p className="text-lg text-gray-600 mb-8">
+            Plataforma completa para gestão nutricional
+          </p>
+        </div>
+        
+        <div className="space-y-4">
+          <Link href="/login" className="block">
+            <Button className="w-full" size="lg">
+              Fazer Login
+            </Button>
+          </Link>
+          
+          <Link href="/signup" className="block">
+            <Button variant="outline" className="w-full" size="lg">
+              Criar Conta
+            </Button>
+          </Link>
+        </div>
+        
+        <div className="mt-8 text-sm text-gray-500">
+          <p>Gerencie pacientes, consultas, planos alimentares e muito mais</p>
+        </div>
       </div>
     </div>
   );
